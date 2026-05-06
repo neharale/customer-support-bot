@@ -56,9 +56,15 @@ def chat(request: ChatRequest):
         )
 
         ticket_id = None
+        priority = None
 
         if should_escalate:
             ticket_id = f"ticket_{uuid.uuid4().hex[:8]}"
+
+            priority = escalation_service.get_priority(
+                request.message,
+                sentiment
+            )
 
             ticket = Ticket(
                 id=ticket_id,
@@ -66,7 +72,7 @@ def chat(request: ChatRequest):
                 issue_summary=request.message,
                 sentiment=sentiment,
                 status="OPEN",
-                priority="HIGH" if sentiment == "negative" else "MEDIUM"
+                priority = priority
             )
 
             db.add(ticket)
@@ -91,7 +97,8 @@ def chat(request: ChatRequest):
                 escalated=True,
                 ticket_id=ticket_id,
                 sentiment=sentiment,
-                confidence_score=confidence_score
+                confidence_score=confidence_score,
+                priority=priority
             )
 
         return ChatResponse(
@@ -100,7 +107,8 @@ def chat(request: ChatRequest):
             escalated=False,
             ticket_id=None,
             sentiment=sentiment,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
+            priority=None
         )
 
     except Exception as e:

@@ -14,3 +14,4 @@ class ChatResponse(BaseModel):
     ticket_id: Optional[str] = None
     sentiment: Optional[str] = None
     confidence_score: Optional[float] = None
+    priority: Optional[str] = None
