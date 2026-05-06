@@ -4,10 +4,13 @@ pydantic
 python-dotenv
 sqlalchemy
 langchain
+langchain-core
+langchain-community
 langchain-openai
 langchain-groq
 langchain-chroma
 chromadb
+sentence-transformers # embeddings to run locally
 textblob
 textblob
 pytest

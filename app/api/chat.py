@@ -16,15 +16,37 @@ sentiment_service = SentimentService()
 escalation_service = EscalationService()
 
 
+def get_recent_conversations(db, user_id: str, limit: int = 5):
+    return (
+        db.query(Conversation)
+        .filter(Conversation.user_id == user_id)
+        .order_by(Conversation.id.desc())
+        .limit(limit)
+        .all()
+    )
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     db = SessionLocal()
 
     try:
+        recent_convs = get_recent_conversations(
+            db=db,
+            user_id=request.user_id,
+            limit=5
+        )
+
+        history = []
+        for conv in reversed(recent_convs):
+            history.append(f"User: {conv.message}")
+            history.append(f"Bot: {conv.bot_response}")
+
         sentiment = sentiment_service.analyze(request.message)
 
         bot_response, confidence_score = llm_service.generate_response(
-            request.message
+            user_message=request.message,
+            history=history
         )
 
         should_escalate = escalation_service.should_escalate(

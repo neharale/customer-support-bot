@@ -15,26 +15,61 @@ class EscalationService:
             "human",
             "agent",
             "manager",
-            "refund",
             "charged twice",
+            "double charged",
             "fraud",
             "lawsuit",
-            "cancel",
+            "cancel my account",
             "complaint",
             "angry",
-            "not helping"
+            "not helping",
+            "delete my account",
+            "cannot access my email",
+            "can't access my email",
+            "cant access my email",
+            "lost package",
+            "order not delivered",
+            "delivery missing"
         ]
+
+        shipping_escalation = (
+            ("package" in message_lower or "order" in message_lower)
+            and (
+                "hasn't arrived" in message_lower
+                or "has not arrived" in message_lower
+                or "not arrived" in message_lower
+                or "missing" in message_lower
+                or "not delivered" in message_lower
+            )
+        )
+
+        tracking_escalation = (
+            "tracking" in message_lower
+            and (
+                "not updating" in message_lower
+                or "not updated" in message_lower
+                or "has not updated" in message_lower
+                or "hasn't updated" in message_lower
+                or "no update" in message_lower
+            )
+        )
+
+        if any(keyword in message_lower for keyword in escalation_keywords):
+            return True
+
+        if shipping_escalation:
+            return True
+
+        if tracking_escalation:
+            return True
 
         if sentiment == "negative":
             return True
 
-        if confidence_score < 0.70:
+        if confidence_score < 0.60:
             return True
 
         if failed_attempts >= 2:
-            return True
-
-        if any(keyword in message_lower for keyword in escalation_keywords):
             return True
 
         return False
