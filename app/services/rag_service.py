@@ -19,7 +19,7 @@ class RAGService:
             embedding_function=self.embeddings
         )
 
-    def retrieve(self, query: str, k: int = 3):
+    def retrieve(self, query: str, k: int = 5):
         results = self.db.similarity_search_with_score(query, k=k)
 
         documents = []

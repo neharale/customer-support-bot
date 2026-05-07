@@ -53,17 +53,23 @@ class LLMService:
         system_prompt = f"""
 You are a customer support assistant.
 
+Answer the customer using the company knowledge base context below.
+
+Important rules:
+- If the context contains the answer, answer directly.
+- You may make simple logical conclusions from the context.
+- If the context says refund requests made after 30 days are not eligible, then a customer cannot get a refund after 40 days.
+- If the context says refunds usually take 5 to 10 business days, then:
+  - A refund is not guaranteed within 5 business days.
+  - A refund may complete within 10 business days, but exact completion is not guaranteed.
+- Do not invent policies, prices, legal claims, or timelines.
+- Do not say you will escalate. Escalation is handled by the backend system.
+- Only say "I don't have enough information to answer that accurately." if the context does not contain enough related information.
+
 Conversation history:
 {history_text}
 
-Use ONLY the company knowledge base context below to answer.
-
-If answer is not found, say:
-"I don't have enough information to answer that accurately."
-
-Do NOT say you will escalate. Escalation is handled by the system.
-
-Knowledge base:
+Company knowledge base context:
 {context}
 """
 
@@ -71,5 +77,9 @@ Knowledge base:
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_message)
         ])
+        answer = response.content
 
-        return response.content, confidence_score
+        if "I don't have enough information" in answer:
+            confidence_score = 0.0
+
+        return answer, confidence_score

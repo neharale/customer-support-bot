@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
@@ -15,3 +16,32 @@ class ChatResponse(BaseModel):
     sentiment: Optional[str] = None
     confidence_score: Optional[float] = None
     priority: Optional[str] = None
+
+
+class TicketResponse(BaseModel):
+    id: str
+    user_id: str
+    issue_summary: str
+    sentiment: str
+    status: str
+    priority: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TicketStatusUpdate(BaseModel):
+    status: str
+
+
+class ConversationResponse(BaseModel):
+    id: str
+    user_id: str
+    message: str
+    bot_response: str
+    sentiment: str
+    confidence_score: float
+    escalated: bool
+
+    class Config:
+        from_attributes = True

@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -22,14 +23,17 @@ def load_documents():
 
 
 def ingest_documents():
+    if CHROMA_DIR.exists():
+        shutil.rmtree(CHROMA_DIR)
+
     documents = load_documents()
 
     if not documents:
         raise ValueError("No documents found in knowledge_base folder.")
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=80
+        chunk_size=1000,
+        chunk_overlap=150
     )
 
     chunks = splitter.split_documents(documents)
