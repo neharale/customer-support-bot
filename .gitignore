@@ -1,0 +1,21 @@
+# Virtual environments
+venv/
+
+# Generated DB and cache files
+backend/chroma_db/
+backend/support_bot.db
+*.sqlite3
+*.db
+
+# Python caches
+**/__pycache__/
+*.py[cod]
+
+# Backup and workspace
+.git-backups/
+.DS_Store
+
+# Node modules and build output
+node_modules/
+dist/
+dist-ssr/
