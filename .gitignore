@@ -11,6 +11,9 @@ backend/support_bot.db
 **/__pycache__/
 *.py[cod]
 
+# Environment files
+backend/.env
+
 # Backup and workspace
 .git-backups/
 .DS_Store
