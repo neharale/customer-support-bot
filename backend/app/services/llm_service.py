@@ -1,6 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
+from app.services.summary_service import SummaryService
 
 from app.config import settings
 from app.services.rag_service import RAGService
@@ -33,6 +34,21 @@ class LLMService:
             )
 
         self.rag_service = RAGService()
+        self.summary_service = SummaryService(self.llm)
+
+    def generate_ticket_summary(
+        self,
+        user_message: str,
+        bot_response: str,
+        sentiment: str,
+        priority: str
+    ) -> str:
+        return self.summary_service.generate_ticket_summary(
+            user_message=user_message,
+            bot_response=bot_response,
+            sentiment=sentiment,
+            priority=priority
+        )
 
     def generate_response(self, user_message: str, history: list[str] = None):
         retrieval_query = user_message

@@ -4,9 +4,17 @@ import "./App.css";
 
 const ADMIN_API_BASE_URL = "http://127.0.0.1:8000/api/admin";
 const CHAT_API_URL = "http://127.0.0.1:8000/api/chat";
+const AUTH_API_URL = "http://127.0.0.1:8000/api/auth/login";
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem("admin_token"));
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   const [tickets, setTickets] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [conversations, setConversations] = useState([]);
 
@@ -19,18 +27,78 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
 
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${token}`,
+  });
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError("");
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append("username", username);
+      formData.append("password", password);
+
+      const response = await axios.post(AUTH_API_URL, formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+
+      const accessToken = response.data.access_token;
+      localStorage.setItem("admin_token", accessToken);
+      setToken(accessToken);
+      setPassword("");
+    } catch (error) {
+      setLoginError("Invalid username or password.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("admin_token");
+    setToken(null);
+    setTickets([]);
+    setAnalytics(null);
+    setConversations([]);
+    setSelectedUserId(null);
+  };
+
+  const handleAuthError = (error) => {
+    if (error.response && error.response.status === 401) {
+      handleLogout();
+    }
+  };
+
   const fetchTickets = async () => {
-    const params = {};
+    try {
+      const params = {};
 
-    if (priorityFilter) params.priority = priorityFilter;
-    if (statusFilter) params.status = statusFilter;
-    if (userFilter.trim()) params.user_id = userFilter.trim();
+      if (priorityFilter) params.priority = priorityFilter;
+      if (statusFilter) params.status = statusFilter;
+      if (userFilter.trim()) params.user_id = userFilter.trim();
 
-    const response = await axios.get(`${ADMIN_API_BASE_URL}/tickets`, {
-      params,
-    });
+      const response = await axios.get(`${ADMIN_API_BASE_URL}/tickets`, {
+        params,
+        headers: getAuthHeaders(),
+      });
 
-    setTickets(response.data);
+      setTickets(response.data);
+    } catch (error) {
+      handleAuthError(error);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await axios.get(`${ADMIN_API_BASE_URL}/analytics`, {
+        headers: getAuthHeaders(),
+      });
+
+      setAnalytics(response.data);
+    } catch (error) {
+      handleAuthError(error);
+    }
   };
 
   const clearFilters = async () => {
@@ -38,26 +106,49 @@ function App() {
     setPriorityFilter("");
     setStatusFilter("");
 
-    const response = await axios.get(`${ADMIN_API_BASE_URL}/tickets`);
-    setTickets(response.data);
+    try {
+      const response = await axios.get(`${ADMIN_API_BASE_URL}/tickets`, {
+        headers: getAuthHeaders(),
+      });
+
+      setTickets(response.data);
+    } catch (error) {
+      handleAuthError(error);
+    }
   };
 
   const fetchConversations = async (userId) => {
-    setSelectedUserId(userId);
+    try {
+      setSelectedUserId(userId);
 
-    const response = await axios.get(
-      `${ADMIN_API_BASE_URL}/conversations/${userId}`
-    );
+      const response = await axios.get(
+        `${ADMIN_API_BASE_URL}/conversations/${userId}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
 
-    setConversations(response.data);
+      setConversations(response.data);
+    } catch (error) {
+      handleAuthError(error);
+    }
   };
 
   const updateStatus = async (ticketId, status) => {
-    await axios.patch(`${ADMIN_API_BASE_URL}/tickets/${ticketId}/status`, {
-      status,
-    });
+    try {
+      await axios.patch(
+        `${ADMIN_API_BASE_URL}/tickets/${ticketId}/status`,
+        { status },
+        {
+          headers: getAuthHeaders(),
+        }
+      );
 
-    await fetchTickets();
+      await fetchTickets();
+      await fetchAnalytics();
+    } catch (error) {
+      handleAuthError(error);
+    }
   };
 
   const sendChatMessage = async () => {
@@ -89,10 +180,13 @@ function App() {
       setChatHistory((prev) => [...prev, botMsg]);
       setChatMessage("");
 
-      await fetchTickets();
+      if (token) {
+        await fetchTickets();
+        await fetchAnalytics();
 
-      if (response.data.escalated) {
-        await fetchConversations(chatUserId);
+        if (response.data.escalated) {
+          await fetchConversations(chatUserId);
+        }
       }
     } catch (error) {
       setChatHistory((prev) => [
@@ -113,18 +207,88 @@ function App() {
   };
 
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    if (token) {
+      fetchTickets();
+      fetchAnalytics();
+    }
+  }, [token]);
+
+  if (!token) {
+    return (
+      <div className="login-page">
+        <form className="login-card" onSubmit={handleLogin}>
+          <h1>Admin Login</h1>
+          <p>Sign in to manage AI support tickets.</p>
+
+          {loginError && <div className="login-error">{loginError}</div>}
+
+          <label>Username</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter the username"
+          />
+
+          <label>Password</label>
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter the password"
+            type="password"
+          />
+
+          <button className="primary-button login-button" type="submit">
+            Login
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      <header>
-        <h1>AI Support Admin Dashboard</h1>
-        <p>
-          Test customer chats, view escalated tickets, update statuses, and
-          inspect conversation history.
-        </p>
+      <header className="top-header">
+        <div>
+          <h1>AI Support Admin Dashboard</h1>
+          <p>
+            Test customer chats, view escalated tickets, update statuses,
+            inspect conversation history, and monitor support analytics.
+          </p>
+        </div>
+
+        <button className="secondary-button" onClick={handleLogout}>
+          Logout
+        </button>
       </header>
+
+      {analytics && (
+        <section className="analytics-grid">
+          <div className="analytics-card">
+            <h3>Total Tickets</h3>
+            <p>{analytics.total_tickets}</p>
+          </div>
+
+          <div className="analytics-card">
+            <h3>Open Tickets</h3>
+            <p>{analytics.open_tickets}</p>
+          </div>
+
+          <div className="analytics-card critical">
+            <h3>P0 Tickets</h3>
+            <p>{analytics.p0_tickets}</p>
+          </div>
+
+          <div className="analytics-card">
+            <h3>Escalation Rate</h3>
+            <p>{analytics.escalation_rate}%</p>
+          </div>
+
+          <div className="analytics-card">
+            <h3>Avg Confidence</h3>
+            <p>{analytics.average_confidence_score}</p>
+          </div>
+        </section>
+      )}
 
       <section className="filters">
         <input
@@ -245,6 +409,7 @@ function App() {
                   <th>Priority</th>
                   <th>Status</th>
                   <th>Issue</th>
+                  <th>Summary</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -268,6 +433,7 @@ function App() {
                     </td>
                     <td>{ticket.status}</td>
                     <td>{ticket.issue_summary}</td>
+                    <td>{ticket.summary || "No summary"}</td>
                     <td>
                       <select
                         value={ticket.status}

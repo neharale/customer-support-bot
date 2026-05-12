@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Float
+from sqlalchemy import Column, String, Boolean, Float, Text
 from app.database import Base
 
 
@@ -23,3 +23,4 @@ class Ticket(Base):
     sentiment = Column(String)
     status = Column(String)
     priority = Column(String)
+    summary = Column(Text, nullable=True)

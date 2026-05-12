@@ -25,10 +25,10 @@ class TicketResponse(BaseModel):
     sentiment: str
     status: str
     priority: Optional[str] = None
+    summary: Optional[str] = None
 
     class Config:
         from_attributes = True
-
 
 class TicketStatusUpdate(BaseModel):
     status: str
@@ -45,3 +45,16 @@ class ConversationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AnalyticsResponse(BaseModel):
+    total_tickets: int
+    open_tickets: int
+    in_progress_tickets: int
+    closed_tickets: int
+    p0_tickets: int
+    p1_tickets: int
+    p2_tickets: int
+    total_conversations: int
+    escalated_conversations: int
+    escalation_rate: float
+    average_confidence_score: float

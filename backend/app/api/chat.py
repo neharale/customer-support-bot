@@ -58,6 +58,11 @@ def chat(request: ChatRequest):
         ticket_id = None
         priority = None
 
+        escalation_message = (
+            "I’m sorry you’re dealing with this. "
+            "I’m escalating this to a human support agent."
+        )
+
         if should_escalate:
             ticket_id = f"ticket_{uuid.uuid4().hex[:8]}"
 
@@ -66,22 +71,32 @@ def chat(request: ChatRequest):
                 sentiment
             )
 
+            ticket_summary = llm_service.generate_ticket_summary(
+                user_message=request.message,
+                bot_response=escalation_message,
+                sentiment=sentiment,
+                priority=priority
+            )
+
             ticket = Ticket(
                 id=ticket_id,
                 user_id=request.user_id,
                 issue_summary=request.message,
                 sentiment=sentiment,
                 status="OPEN",
-                priority = priority
+                priority=priority,
+                summary=ticket_summary
             )
 
             db.add(ticket)
+
+        final_bot_response = escalation_message if should_escalate else bot_response
 
         conversation = Conversation(
             id=str(uuid.uuid4()),
             user_id=request.user_id,
             message=request.message,
-            bot_response=bot_response,
+            bot_response=final_bot_response,
             sentiment=sentiment,
             confidence_score=confidence_score,
             escalated=should_escalate
@@ -93,7 +108,7 @@ def chat(request: ChatRequest):
         if should_escalate:
             return ChatResponse(
                 type="escalation",
-                message="I’m sorry you’re dealing with this. I’m escalating this to a human support agent.",
+                message=escalation_message,
                 escalated=True,
                 ticket_id=ticket_id,
                 sentiment=sentiment,
